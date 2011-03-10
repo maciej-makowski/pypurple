@@ -1,0 +1,14 @@
+autoscan: warning: missing AC_PROG_CXX wanted by: 
+	config/ltmain.sh:677
+	config/ltmain.sh:1015
+	config/ltmain.sh:1022
+	config/ltmain.sh:1022
+	config/ltmain.sh:1022
+	config/ltmain.sh:1022
+	config/ltmain.sh:1031
+	config/ltmain.sh:1037
+	config/ltmain.sh:1037
+	config/ltmain.sh:1037
+	config/ltmain.sh:1037
+autoscan: warning: missing AC_PROG_RANLIB wanted by: 
+	config/ltmain.sh:1601
