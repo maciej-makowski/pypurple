@@ -104,5 +104,9 @@ AC_DEFUN([LIBPURPLE_DEVEL],
 	PURPLE_LIBS+="-L$PURPLE_LIB -lpurple"
 	AC_SUBST([PURPLE_LIBS])
 
+	#
+	# Getting libpurple version
+	#
+	
 ])
 

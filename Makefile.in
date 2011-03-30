@@ -14,9 +14,6 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
-
-# generated automatically by Autoconf from AX_AUTOMAKE_MACROS_STATIC
-# on 
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -44,7 +41,7 @@ DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	config/mkinstalldirs
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/AX_PROG_SPLINT.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/libpurple_devel.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
 	$(top_srcdir)/m4/lt~obsolete.m4 \
@@ -118,7 +115,6 @@ AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
 AWK = @AWK@
-AX_SPLINTFLAGS = @AX_SPLINTFLAGS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
@@ -173,6 +169,8 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+PURPLE_CFLAGS = @PURPLE_CFLAGS@
+PURPLE_LIBS = @PURPLE_LIBS@
 PYTHON = @PYTHON@
 PYTHON_CPPFLAGS = @PYTHON_CPPFLAGS@
 PYTHON_EXTRA_LDFLAGS = @PYTHON_EXTRA_LDFLAGS@
@@ -184,8 +182,6 @@ RANLIB = @RANLIB@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
-SPLINT = @SPLINT@
-SPLINTFLAGS = $(INCLUDES)
 STRIP = @STRIP@
 VERSION = @VERSION@
 abs_builddir = @abs_builddir@
@@ -242,10 +238,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 ACLOCAL_AMFLAGS = -I m4 $(ACLOCAL_ARGS)
 SUBDIRS = src test
-@ax_prog_splint_enable_TRUE@SPLINT_BIN = $(subst /,_,$(PROGRAMS:$(EXEEXT)=))
-@ax_prog_splint_enable_TRUE@SPLINT_LIB = $(subst /,_,$(LIBRARIES:.a=_a))
-@ax_prog_splint_enable_TRUE@SPLINT_LTLIB = $(subst /,_,$(LTLIBRARIES:.la=_la))
-@ax_prog_splint_enable_TRUE@SPLINTFILES = $(addsuffix _splint.log,$(SPLINT_LIB) $(SPLINT_BIN) $(SPLINT_LTLIB))
+SPLINTFLAGS = $(INCLUDES)
 all: all-recursive
 
 .SUFFIXES:
@@ -635,13 +628,13 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-recursive
 
-clean-am: clean-generic clean-libtool clean-local mostlyclean-am
+clean-am: clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -f Makefile
 distclean-am: clean-am distclean-generic distclean-libtool \
-	distclean-local distclean-tags
+	distclean-tags
 
 dvi: dvi-recursive
 
@@ -708,38 +701,20 @@ uninstall-am:
 
 .PHONY: $(RECURSIVE_CLEAN_TARGETS) $(RECURSIVE_TARGETS) CTAGS GTAGS \
 	all all-am am--refresh check check-am clean clean-generic \
-	clean-libtool clean-local ctags ctags-recursive dist dist-all \
-	dist-bzip2 dist-gzip dist-lzma dist-shar dist-tarZ dist-xz \
-	dist-zip distcheck distclean distclean-generic \
-	distclean-libtool distclean-local distclean-tags \
-	distcleancheck distdir distuninstallcheck dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs installdirs-am maintainer-clean \
-	maintainer-clean-generic mostlyclean mostlyclean-generic \
-	mostlyclean-libtool pdf pdf-am ps ps-am tags tags-recursive \
-	uninstall uninstall-am
+	clean-libtool ctags ctags-recursive dist dist-all dist-bzip2 \
+	dist-gzip dist-lzma dist-shar dist-tarZ dist-xz dist-zip \
+	distcheck distclean distclean-generic distclean-libtool \
+	distclean-tags distcleancheck distdir distuninstallcheck dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-recursive uninstall uninstall-am
 
-
-@ax_prog_splint_enable_TRUE@define splint_rules
-@ax_prog_splint_enable_TRUE@$(1)_splint.log: $$($(1)_OBJECTS)
-@ax_prog_splint_enable_TRUE@	-$(SPLINT) $(AX_SPLINTFLAGS) $(SPLINTFLAGS)  $(AM_SPLINTFLAGS) $(DEFAULT_INCLUDES) $(AM_CPPFLAGS) +error-stream-stdout +warning-stream-stdout $$(addprefix $(srcdir)/,$$($(1)_SOURCES)) > $$@
-@ax_prog_splint_enable_TRUE@endef
-
-@ax_prog_splint_enable_TRUE@splint-check: all $(SPLINTFILES)
-
-@ax_prog_splint_enable_TRUE@$(foreach bin, $(SPLINT_BIN) $(SPLINT_LIB) $(SPLINT_LTLIB),$(eval $(call splint_rules,$(bin))))
-
-.PHONY: clean-local-splint distclean-local-splint
-clean-local: clean-local-splint
-clean-local-splint:
-	-test -z "$(SPLINTFILES)" || rm -f $(SPLINTFILES)
-
-distclean-local: distclean-local-splint
-distclean-local-splint: clean-local-splint
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

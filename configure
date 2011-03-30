@@ -706,7 +706,7 @@ PACKAGE_STRING='pyplug 0.1a'
 PACKAGE_BUGREPORT='cfiet@cfiet.net'
 PACKAGE_URL=''
 
-ac_unique_file="src/pyplug/pyplug.c"
+ac_unique_file="src/pyplug.c"
 # Factoring default headers for most tests.
 ac_includes_default="\
 #include <stdio.h>
@@ -747,11 +747,6 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
-ax_prog_splint_enable_FALSE
-ax_prog_splint_enable_TRUE
-AX_SPLINTFLAGS
-SPLINTFLAGS
-SPLINT
 CUTTER
 CUTTER_LIBS
 CUTTER_CFLAGS
@@ -762,6 +757,8 @@ PYTHON_LDFLAGS
 PYTHON_CPPFLAGS
 PYTHON
 PYTHON_VERSION
+PURPLE_LIBS
+PURPLE_CFLAGS
 DEPS_LIBS
 DEPS_CFLAGS
 PKG_CONFIG_LIBDIR
@@ -882,6 +879,9 @@ with_pic
 enable_fast_install
 with_gnu_ld
 enable_libtool_lock
+with_purple
+with_purple_lib
+with_purple_include
 with_cutter
 '
       ac_precious_vars='build_alias
@@ -900,9 +900,7 @@ DEPS_CFLAGS
 DEPS_LIBS
 PYTHON_VERSION
 CUTTER_CFLAGS
-CUTTER_LIBS
-SPLINT
-SPLINTFLAGS'
+CUTTER_LIBS'
 
 
 # Initialize some variables set by options.
@@ -1537,6 +1535,9 @@ Optional Packages:
   --with-pic              try to use only PIC/non-PIC objects [default=use
                           both]
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
+  --with-purple=<path>		path containing libpurple header and library subdirs and files
+  --with-purple-lib=<path>	path containing libpurple library subdirs and files
+  --with-purple-include=<path>	path containing libpurple header subdirs and files
   --with-cutter           Use Cutter (default: auto)
 
 Some influential environment variables:
@@ -1562,8 +1563,6 @@ Some influential environment variables:
   CUTTER_CFLAGS
               C compiler flags for CUTTER, overriding pkg-config
   CUTTER_LIBS linker flags for CUTTER, overriding pkg-config
-  SPLINT      splint executable
-  SPLINTFLAGS splint flags
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -2772,6 +2771,7 @@ am__tar='${AMTAR} chof - "$$tardir"'; am__untar='${AMTAR} xf -'
 
 
 
+# w
 # ===========================================================================
 #      http://www.gnu.org/software/autoconf-archive/ax_python_devel.html
 # ===========================================================================
@@ -10475,8 +10475,6 @@ CC="$lt_save_CC"
 
 
 
-
-
 GLIB_MOD="glib-2.0 >= 2.14.0"
 
 
@@ -10687,55 +10685,122 @@ $as_echo "yes" >&6; }
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for purple_debug_info in -lpurple" >&5
-$as_echo_n "checking for purple_debug_info in -lpurple... " >&6; }
-if test "${ac_cv_lib_purple_purple_debug_info+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpurple  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
 
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char purple_debug_info ();
-int
-main ()
-{
-return purple_debug_info ();
-  ;
-  return 0;
-}
+
+# Check whether --with-purple was given.
+if test "${with_purple+set}" = set; then :
+  withval=$with_purple; LIBPURPLE_lib_check="$with_purple/lib $with_purple/lib/purple $with_purple/lib/libpurple $with_purple/purple/.libs $with_purple/libpurple/.libs"
+	 LIBPURPLE_inc_check="$with_purple/include $with_purple/include/purple $with_purple/include/libpurple $with_purple/libpurple"
+else
+  LIBPURPLE_lib_check="/usr/local/lib /usr/local/lib/purple /usr/local/lib/libpurple /usr/lib /usr/lib/purple /usr/lib/libpurple"
+	 LIBPURPLE_inc_check="/usr/local/include /usr/local/include/purple /usr/local/include/libpurple /usr/include /usr/include/purple /usr/include/libpurple"
+
+fi
+
+
+# Check whether --with-purple-lib was given.
+if test "${with_purple_lib+set}" = set; then :
+  withval=$with_purple_lib; LIBPURPLE_lib_check="$with_purple_lib/lib $with_purple_lib/lib/purple $with_purple_lib/lib/libpurple $with_purple_lib/purple/.libs $with_purple_lib/libpurple/.libs"
+fi
+
+
+# Check whether --with-purple-include was given.
+if test "${with_purple_include+set}" = set; then :
+  withval=$with_purple_include; LIBPURPLE_inc_check="$with_purple_include/include $with_purple_include/include/purple $with_purple_include/include/libpurple $with_purple_include/libpurple"
+fi
+
+
+	#
+	# Find path to the header files
+	#
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for purple header files" >&5
+$as_echo_n "checking for purple header files... " >&6; }
+	PURPLE_INCLUDE=""
+	for dir in $LIBPURPLE_inc_check
+	do
+		if test -d "$dir" && test -f "$dir/purple.h"
+		then
+			PURPLE_INCLUDE=$dir
+			break
+		fi
+	done
+
+	if test -z "$PURPLE_INCLUDE"
+	then
+		as_fn_error $? "Cannot find purple headers in $LIBPURPLE_inc_check" "$LINENO" 5
+	fi
+
+	case "$PURPLE_INCLUDE" in
+		/* ) ;;
+		* )  as_fn_error $? "The purple headers directory path ($PURPLE_INCLUDE) must be absolute." "$LINENO" 5  ;;
+	esac
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $PURPLE_INCLUDE" >&5
+$as_echo "found in $PURPLE_INCLUDE" >&6; }
+	PURPLE_CFLAGS+=-I$PURPLE_INCLUDE
+
+
+	#
+	# Find path to library
+	#
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for purple library" >&5
+$as_echo_n "checking for purple library... " >&6; }
+	PURPLE_LIB=""
+	for dir in $LIBPURPLE_lib_check
+	do
+		if test -d "$dir" && test -f "$dir/libpurple.so"
+		then
+			PURPLE_LIB=$dir
+			break
+		fi
+	done
+
+	if test -z "$PURPLE_LIB"
+	then
+		as_fn_error $? "Cannot find purple in $LIBPURPLE_lib_check" "$LINENO" 5
+	fi
+
+	case "$PURPLE_LIB" in
+		/* ) ;;
+		* )  as_fn_error $? "The purple library directory path ($PURPLE_LIB) must be absolute." "$LINENO" 5  ;;
+	esac
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: found in $PURPLE_LIB" >&5
+$as_echo "found in $PURPLE_LIB" >&6; }
+	PURPLE_LIBS+="-L$PURPLE_LIB -lpurple"
+
+
+	#
+	# Getting libpurple version
+	#
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define PYTHON_SONAME "$ac_python_soname"
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_purple_purple_debug_info=yes
-else
-  ac_cv_lib_purple_purple_debug_info=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_purple_purple_debug_info" >&5
-$as_echo "$ac_cv_lib_purple_purple_debug_info" >&6; }
-if test "x$ac_cv_lib_purple_purple_debug_info" = x""yes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPURPLE 1
+
+
+
+cat >>confdefs.h <<_ACEOF
+#define PYPLUG_PLUGIN_ID "lopl-cfiet-python"
 _ACEOF
 
-  LIBS="-lpurple $LIBS"
 
-else
-  as_fn_error $? "No libpurple found." "$LINENO" 5
-fi
+cat >>confdefs.h <<_ACEOF
+#define PYPLUG_PLUGIN_VERSION "0.1a"
+_ACEOF
 
 
-PYTHON_MOD=">= 2.7"
+cat >>confdefs.h <<_ACEOF
+#define PYPLUG_PLUGIN_AUTHOR "Maciej Makowski <cfiet@cfiet.net>"
+_ACEOF
+
+
+cat >>confdefs.h <<_ACEOF
+#define PYPLUG_PLUGIN_HOMEPAGE "http://www.cfiet.net"
+_ACEOF
+
+
+PYTHON_MOD=">= 2.6"
 
 	#
 	# Allow the use of a (user set) custom python version
@@ -11085,7 +11150,6 @@ as_fn_error $? "
 See \`config.log' for more details" "$LINENO" 5 ; }
 	  PYTHON_VERSION=""
 	fi
-
 	#
 	# all done!
 	#
@@ -11216,99 +11280,9 @@ fi
 
 
 
+#AX_PROG_SPLINT
 
-AMINCLUDE_TIME=`date`
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-if test "x$SPLINT" = "x"; then
-   for ac_prog in splint
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
-$as_echo_n "checking for $ac_word... " >&6; }
-if test "${ac_cv_prog_SPLINT+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  if test -n "$SPLINT"; then
-  ac_cv_prog_SPLINT="$SPLINT" # Let the user override the test.
-else
-as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
-for as_dir in $PATH
-do
-  IFS=$as_save_IFS
-  test -z "$as_dir" && as_dir=.
-    for ac_exec_ext in '' $ac_executable_extensions; do
-  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_SPLINT="$ac_prog"
-    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
-    break 2
-  fi
-done
-  done
-IFS=$as_save_IFS
-
-fi
-fi
-SPLINT=$ac_cv_prog_SPLINT
-if test -n "$SPLINT"; then
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $SPLINT" >&5
-$as_echo "$SPLINT" >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-
-
-  test -n "$SPLINT" && break
-done
-
-fi
-if test "x$SPLINT" != "x"; then
-   ax_splintflags=-weak
-   if test "x-weak" = "x"; then
-      ax_splintflags=-weak
-   fi
-   AX_SPLINTFLAGS=$ax_splintflags
-
-   ax_prog_splint_enable=yes
-else
-   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: splint support disabled" >&5
-$as_echo "$as_me: WARNING: splint support disabled" >&2;}
-   ax_prog_splint_enable=no
-fi
- if test x"$ax_prog_splint_enable" = x"yes"; then
-  ax_prog_splint_enable_TRUE=
-  ax_prog_splint_enable_FALSE='#'
-else
-  ax_prog_splint_enable_TRUE='#'
-  ax_prog_splint_enable_FALSE=
-fi
-
-
-
-
-
-
-
-
-
-
-
-ac_config_files="$ac_config_files Makefile src/Makefile src/pyplug/Makefile test/Makefile"
+ac_config_files="$ac_config_files Makefile src/Makefile test/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -11422,10 +11396,6 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
-Usually this means the macro was only invoked conditionally." "$LINENO" 5
-fi
-if test -z "${ax_prog_splint_enable_TRUE}" && test -z "${ax_prog_splint_enable_FALSE}"; then
-  as_fn_error $? "conditional \"ax_prog_splint_enable\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
@@ -12291,7 +12261,6 @@ do
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
     "src/Makefile") CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
-    "src/pyplug/Makefile") CONFIG_FILES="$CONFIG_FILES src/pyplug/Makefile" ;;
     "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5 ;;

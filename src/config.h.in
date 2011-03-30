@@ -6,9 +6,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `purple' library (-lpurple). */
-#undef HAVE_LIBPURPLE
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
@@ -60,6 +57,18 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Plugin author for libpurple */
+#undef PYPLUG_PLUGIN_AUTHOR
+
+/* Plugin homepage for libpurple */
+#undef PYPLUG_PLUGIN_HOMEPAGE
+
+/* Plugin id for libpurple */
+#undef PYPLUG_PLUGIN_ID
+
+/* Plugin version for libpurple */
+#undef PYPLUG_PLUGIN_VERSION
 
 /* Linked python version */
 #undef PYTHON_SONAME

@@ -15,4 +15,4 @@ run()
 #run autoheader
 #run automake --add-missing --foreign --copy
 #run autoconf
-autoreconf -W no-gnu
+autoreconf -Wno-gnu
