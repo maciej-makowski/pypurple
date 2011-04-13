@@ -1,3 +1,11 @@
+/*
+ * TODO: Make it work on Python 3.0 (UNICODE mothafucka, do you use it?!)
+ * TODO: Refactor function names, private ones should not pollute file with pyplug_ prefix
+ * TODO: Make module properly init/load/unload/destroy
+ * TODO: Investigate why everything blows up if plugin module imports ctypes
+ * TODO: Move defines somewhere else
+ * TODO: Create apporpriate types for python strings, internal pidgin string and out strings, so we know who and how should deallocate them
+ */
 #include <Python.h>
 
 #include <dlfcn.h>
@@ -273,13 +281,37 @@ pyplug_remove_plugin_data(PurplePlugin *plugin)
 
 
 static gchar*
-pyplug_stringify_exception(PyObject *error)
+stringify_pyobject(PyObject *o)
 {
-	PyObject *ex_pystr = PyObject_Str(error);
-	gchar *ex_str =  PyString_AsString(ex_pystr);
+	PyObject *pystr = PyObject_Str(o);
+	char *str = PyString_AsString(pystr);
+	Py_DECREF(pystr);
+	return str;
+}
 
-	Py_DECREF(ex_pystr);
-	return ex_str;
+static gchar*
+get_python_error(void)
+{
+	PyObject *type = NULL,
+			 *value = NULL,
+			 *stacktrace = NULL;
+	gchar*	error = NULL,
+			*str_type = NULL,
+			*str_value = NULL;
+
+	PyErr_Fetch(&type, &value, &stacktrace);
+	if(type != NULL && value != NULL && stacktrace != NULL) {
+		PyErr_NormalizeException(&type, &value, &stacktrace);
+		str_type = stringify_pyobject(type);
+		str_value = stringify_pyobject(value);
+
+		error = g_strdup_printf("%s: %s", str_type, str_value);
+
+		Py_DECREF(stacktrace);
+		Py_DECREF(value);
+		Py_DECREF(type);
+	}
+	return error;
 }
 
 static PyObject *
@@ -293,7 +325,7 @@ pyplug_find_method(PyObject *module, const char *module_path,
 	module_dict = PyModule_GetDict(module);
 	method = PyDict_GetItemString(module_dict, method_name);
 	if(method == NULL && (error = PyErr_Occurred()) != NULL) {
-		gchar* ex_str = pyplug_stringify_exception(error);
+		gchar* ex_str = get_python_error();
 		purple_debug_warning(PYPLUG_PLUGIN_ID, "Error while searching method "
 			"'%s' in %s: %s\n", method_name, module_path, ex_str);
 		PyMem_Free(ex_str);
@@ -328,7 +360,7 @@ pyplug_find_property(PyObject *module, const char *module_path,
 	module_dict = PyModule_GetDict(module);
 	property = PyDict_GetItemString(module_dict, property_name);
 	if(property == NULL && (error = PyErr_Occurred()) != NULL) {
-		gchar* ex_str = pyplug_stringify_exception(error);
+		gchar* ex_str = get_python_error();
 		purple_debug_warning(PYPLUG_PLUGIN_ID, "Error while searching method "
 			"'%s' in %s: %s\n", property_name, module_path, ex_str);
 		PyMem_Free(ex_str);
@@ -456,7 +488,7 @@ pyplug_probe_python_plugin(PurplePlugin *plugin)
 
 	module = PyImport_ImportModule(module_name);
 	if(module == NULL && (error = PyErr_Occurred()) != NULL) {
-		gchar *ex_str = pyplug_stringify_exception(error);
+		gchar *ex_str = get_python_error();
 		purple_debug_error(PYPLUG_PLUGIN_ID, "Error while importing python "
 			"module '%s': %s\n", module_name, ex_str);
 		plugin->error = g_strdup(ex_str);
