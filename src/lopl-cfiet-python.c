@@ -19,20 +19,26 @@
 
 #define PYPLUG_PLUGIN_NAME			"Python plugin loader"
 #define PYPLUG_PLUGIN_SUMMARY		"Loads python plugins"
-#define PYPLUG_PLUGIN_DESCRIPTION	PYPLUG_PLUGIN_SUMMARY "\nSupported python version: %s."
+#define PYPLUG_PLUGIN_DESCRIPTION	PYPLUG_PLUGIN_SUMMARY \
+	"\nSupported python version: %s."
 
 #define PREF_PREFIX		"/plugins/core/" PYPLUG_PLUGIN_ID
 #define PREF_SYSPATH		PREF_PREFIX "/syspath"
 #define PREF_SYSPATH_REPLACE	PREF_PREFIX "/syspath_replace"
 #define PREF_FINALIZE_ON_UNLOAD PREF_PREFIX "/finalize_on_unload"
 
-#define PYPLUG_MODULE_ID			"MODULE_ID"
-#define PYPLUG_MODULE_NAME			"MODULE_NAME"
-#define PYPLUG_MODULE_SUMMARY		"MODULE_SUMMARY"
-#define PYPLUG_MODULE_DESCRIPTION	"MODULE_DESCRIPTION"
-#define PYPLUG_MODULE_VERSION		"MODULE_VERSION"
-#define PYPLUG_MODULE_AUTHOR		"MODULE_AUTHOR"
-#define PYPLUG_MODULE_HOMEPAGE		"MODULE_HOMEPAGE"
+#define PYPLUG_MODULE_ID			"ID"
+#define PYPLUG_MODULE_NAME			"NAME"
+#define PYPLUG_MODULE_SUMMARY		"SUMMARY"
+#define PYPLUG_MODULE_DESCRIPTION	"DESCRIPTION"
+#define PYPLUG_MODULE_VERSION		"VERSION"
+#define PYPLUG_MODULE_AUTHOR		"AUTHOR"
+#define PYPLUG_MODULE_HOMEPAGE		"HOMEPAGE"
+#define PYPLUG_MODULE_TYPE			"TYPE"
+#define PYPLUG_MODULE_PRIORITY		"PRIORITY"
+#define PYPLUG_PURPLE_VERSION		"PURPLE_VERSION"
+#define PYPLUG_PURPLE_MAGIC			"PURPLE_MAGIC"
+
 #define PYPLUG_MODULE_ONINIT		"on_init"
 #define PYPLUG_MODULE_ONLOAD		"on_load"
 #define PYPLUG_MODULE_ONUNLOAD		"on_unload"
@@ -57,6 +63,10 @@ static PyplugData pyplug_data;
 // This plugin data.
 //
 static PurplePlugin *purple_plugin;
+
+static gboolean module_load_wrapper(PurplePlugin *plugin);
+static gboolean module_unload_wrapper(PurplePlugin *plugin);
+static void module_destroy_wrapper(PurplePlugin *plugin);
 
 // Method for creating libpurple options frame.
 static PurplePluginPrefFrame *
@@ -218,27 +228,37 @@ pyplug_get_module_name(const char* filename)
 	return module_name;
 }
 
-static gboolean
-python_plugin_loader(PurplePlugin *plugin)
-{
-}
+#define PYPLUG_MODULE_DEFAULT_VERSION "0.0"
+#define PYPLUG_MODULE_DEFAULT_INFO_VALUE " "
 
-static gboolean
-python_plugin_unloader(PurplePlugin *plugin)
+static PurplePluginInfo *
+create_module_plugin_info(const gchar * module_name)
 {
-}
+	PurplePluginInfo * plugin_info = g_new0(PurplePluginInfo, 1);
 
-static void
-python_plugin_destroyer(PurplePlugin *plugin)
-{
+	plugin_info->magic = PURPLE_PLUGIN_MAGIC;
+	plugin_info->major_version = PURPLE_MAJOR_VERSION;
+	plugin_info->minor_version = PURPLE_MINOR_VERSION;
+	plugin_info->type = PURPLE_PLUGIN_STANDARD;
+	plugin_info->priority = PURPLE_PRIORITY_DEFAULT;
+
+	plugin_info->id = g_strdup(module_name);
+	plugin_info->name = g_strdup(module_name);
+	plugin_info->version = g_strdup(PYPLUG_MODULE_DEFAULT_VERSION);
+	plugin_info->summary = g_strdup(PYPLUG_MODULE_DEFAULT_INFO_VALUE);
+	plugin_info->description = g_strdup(PYPLUG_MODULE_DEFAULT_INFO_VALUE);
+	plugin_info->author = g_strdup(PYPLUG_MODULE_DEFAULT_INFO_VALUE);
+	plugin_info->homepage = g_strdup(PYPLUG_MODULE_DEFAULT_INFO_VALUE);
+
+	return plugin_info;
 }
 
 static PyplugPluginData*
 pyplug_init_plugin_data(PurplePlugin* plugin, PyObject *module, const char *module_name)
 {
 	PyplugPluginData* data = g_new0(PyplugPluginData, 1);
-
 	data->plugin = plugin;
+	data->plugin->info = create_module_plugin_info(module_name);
 	data->py_module_name = g_strdup(module_name);
 	data->module = module;
 	Py_INCREF(data->module);
@@ -279,7 +299,6 @@ pyplug_remove_plugin_data(PurplePlugin *plugin)
 	g_free(element);
 }
 
-
 static gchar*
 stringify_pyobject(PyObject *o)
 {
@@ -300,14 +319,14 @@ get_python_error(void)
 			*str_value = NULL;
 
 	PyErr_Fetch(&type, &value, &stacktrace);
-	if(type != NULL && value != NULL && stacktrace != NULL) {
+	if(type != NULL && value != NULL) {
 		PyErr_NormalizeException(&type, &value, &stacktrace);
 		str_type = stringify_pyobject(type);
 		str_value = stringify_pyobject(value);
 
 		error = g_strdup_printf("%s: %s", str_type, str_value);
 
-		Py_DECREF(stacktrace);
+		Py_XDECREF(stacktrace);
 		Py_DECREF(value);
 		Py_DECREF(type);
 	}
@@ -417,52 +436,201 @@ pyplug_find_loader_methods(PyObject *module, PyplugPluginData *plugin_data)
 			"in module %s.\n", plugin_data->plugin->path);
 		return FALSE;
 	}
+
+	plugin_data->plugin->info->load = plugin_data->on_load != NULL 
+		? module_load_wrapper : NULL;
+	plugin_data->plugin->info->unload = plugin_data->on_unload != NULL 
+		? module_unload_wrapper : NULL;
+	plugin_data->plugin->info->destroy = plugin_data->on_destroy != NULL 
+		? module_destroy_wrapper : NULL;
+
 	return TRUE;
 }
 
-#define FILL_PROPERTY_STRING(field, property_name, default_value) \
-	field = pyplug_get_string_property(plugin_data, property_name); \
-	if(field == NULL || strlen(field) == 0) { \
-		g_free(field); \
-		field = g_strdup(default_value); \
-	}
+#define SET_STRING_IN_PLUGIN_DICT(KEY, VALUE, DEFAULT) \
+	PyDict_SetItemString(dict, KEY, \
+			PyString_FromString( \
+				plugin->info->VALUE == NULL || strlen(plugin->info->VALUE) == 0 \
+				? DEFAULT \
+				: plugin->info->VALUE) \
+			);
 
-#define FILL_PROPERTY_STRING_OR_FAIL(field, property_name, default_value) \
-	field = pyplug_get_string_property(plugin_data, property_name); \
-	if(field == NULL || strlen(field) == 0) { \
-		g_free(field); \
-		field = g_strdup(default_value); \
-		result = FALSE; \
-	}
+#define SET_INT_IN_PLUGIN_DICT(KEY, VALUE) \
+	PyDict_SetItemString(dict, KEY, PyInt_FromLong(plugin->info->VALUE));
 
-static gboolean
-pyplug_init_python_plugin_info(PyplugPluginData *plugin_data)
+static PyObject *
+plugin_to_pydict(PurplePlugin *plugin, const char *module_name)
 {
-	gboolean result = TRUE;
-	PyObject *module;
-	PurplePlugin *plugin;
-	const char *module_name;
+	PyObject *dict = PyDict_New();
 
-	plugin = plugin_data->plugin;
-	module = plugin_data->module;
-	module_name = plugin_data->py_module_name;
-
-	plugin->info = g_new0(PurplePluginInfo, 1);
-	plugin->info->magic = PURPLE_PLUGIN_MAGIC;
-	plugin->info->major_version = PURPLE_MAJOR_VERSION;
-	plugin->info->minor_version = PURPLE_MINOR_VERSION;
 	plugin->info->type = PURPLE_PLUGIN_STANDARD;
 	plugin->info->priority = PURPLE_PRIORITY_DEFAULT;
 
-	FILL_PROPERTY_STRING_OR_FAIL(plugin->info->id, PYPLUG_MODULE_ID, module_name);
-	FILL_PROPERTY_STRING_OR_FAIL(plugin->info->name, PYPLUG_MODULE_NAME, module_name);
-	FILL_PROPERTY_STRING(plugin->info->description, PYPLUG_MODULE_DESCRIPTION, " ");
-	FILL_PROPERTY_STRING(plugin->info->author, PYPLUG_MODULE_AUTHOR, "unknown");
-	FILL_PROPERTY_STRING(plugin->info->version, PYPLUG_MODULE_VERSION, "undefined");
-	FILL_PROPERTY_STRING(plugin->info->summary, PYPLUG_MODULE_SUMMARY, " ");
-	FILL_PROPERTY_STRING(plugin->info->homepage, PYPLUG_MODULE_HOMEPAGE, "unknown");
+	SET_INT_IN_PLUGIN_DICT(PYPLUG_MODULE_TYPE, type);
+	SET_INT_IN_PLUGIN_DICT(PYPLUG_MODULE_PRIORITY, priority);
+
+	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_ID, id, module_name);
+	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_NAME, name, module_name);
+	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_SUMMARY, summary, "");
+	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_DESCRIPTION, description, "");
+	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_AUTHOR, author, "");
+	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_VERSION, version, "");
+	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_HOMEPAGE, homepage, "");
+
+	PyDict_SetItemString(dict, PYPLUG_PURPLE_MAGIC,
+			PyInt_FromLong(PURPLE_PLUGIN_MAGIC));
+	PyDict_SetItemString(dict, PYPLUG_PURPLE_VERSION,
+			Py_BuildValue("(ii)", PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION));
+
+	return dict;
+}
+
+#define UPDATE_PLUGIN_INFO_INT(field, key) { \
+		PyObject *value = PyDict_GetItemString(dict, key); \
+		if(value != Py_None) { \
+			info->field = PyInt_AsLong(value); \
+		} \
+	}
+
+#define UPDATE_PLUGIN_INFO_STRING(field, key) { \
+		PyObject *value = PyDict_GetItemString(dict, key); \
+		if(value != Py_None) { \
+			g_free(info->field); \
+			info->field = PyString_AsString(value); \
+		} \
+	}
+
+static void
+update_module_plugin_data(PurplePluginInfo *info, PyObject *dict)
+{
+	UPDATE_PLUGIN_INFO_INT(type, PYPLUG_MODULE_TYPE);
+	UPDATE_PLUGIN_INFO_INT(priority, PYPLUG_MODULE_PRIORITY);
+
+	UPDATE_PLUGIN_INFO_STRING(id, PYPLUG_MODULE_ID);
+	UPDATE_PLUGIN_INFO_STRING(name, PYPLUG_MODULE_NAME);
+	UPDATE_PLUGIN_INFO_STRING(description, PYPLUG_MODULE_DESCRIPTION);
+	UPDATE_PLUGIN_INFO_STRING(summary, PYPLUG_MODULE_SUMMARY);
+	UPDATE_PLUGIN_INFO_STRING(author, PYPLUG_MODULE_AUTHOR);
+	UPDATE_PLUGIN_INFO_STRING(version, PYPLUG_MODULE_VERSION);
+	UPDATE_PLUGIN_INFO_STRING(homepage, PYPLUG_MODULE_HOMEPAGE);
+}
+
+typedef void (*OnAfterUtilFunc)(PyplugPluginData *plugin, gboolean result,
+		PyObject *plugin_dict);
+
+static gboolean
+call_module_python_function(PyObject *function, PyplugPluginData *pyplugin, 
+		OnAfterUtilFunc after_func_cb) 
+{
+	gboolean result = FALSE;
+	PyObject *error = NULL,
+			 *plugin_dict = NULL,
+			 *call_tuple = NULL,
+			 *init_ret = NULL;
+
+	plugin_dict = plugin_to_pydict(pyplugin->plugin, pyplugin->py_module_name);
+	call_tuple = PyTuple_New(1);
+	PyTuple_SetItem(call_tuple, 0, plugin_dict);
+	init_ret = PyObject_CallObject(function, call_tuple);
+
+	if(init_ret == NULL && (error = PyErr_Occurred()) != NULL) {
+		gchar *estr = get_python_error();
+		pyplugin->plugin->error = estr;
+		purple_debug_error(pyplugin->plugin->info->id, "Error while loading "
+			"plugin module %s: %s\n", pyplugin->py_module_name, estr);
+	}
+
+	if(init_ret != NULL) {
+		result = (init_ret != Py_None) && (init_ret == Py_True);
+	} else {
+		result = FALSE;
+	}
+
+	if(after_func_cb != NULL) {
+		after_func_cb(pyplugin, result, plugin_dict);
+	}
+
+	Py_XDECREF(plugin_dict);
+	Py_XDECREF(init_ret);
+	Py_XDECREF(call_tuple);
+	Py_XDECREF(error);
 
 	return result;
+}
+
+void
+on_after_module_init(PyplugPluginData *pyplugin, gboolean result, PyObject *plugin_dict)
+{
+	update_module_plugin_data(pyplugin->plugin->info, plugin_dict);
+}
+
+typedef enum _PyplugModuleFunctionType {
+	On_Init = 1,
+	On_Load,
+	On_Unload,
+	On_Destroy
+} PyplugModuleFunctionType;
+
+static gboolean
+call_module_util_function(PyplugPluginData *pyplugin, PyplugModuleFunctionType type)
+{
+	PyObject *func_object;
+	gchar *func_name;
+	OnAfterUtilFunc after_util_cb = NULL;
+
+	switch(type) {
+		case On_Init:
+			func_object = pyplugin->on_init;
+			func_name = "on_init";
+			after_util_cb = on_after_module_init;
+			break;
+		case On_Load:
+			func_object = pyplugin->on_load;
+			func_name = "on_load";
+			break;
+		case On_Unload:
+			func_object = pyplugin->on_unload;
+			func_name = "on_unload";
+			break;
+		case On_Destroy:
+			func_object = pyplugin->on_destroy;
+			func_name = "on_destroy";
+			break;
+		default:
+			return FALSE;
+	}
+	return call_module_python_function(func_object, pyplugin, after_util_cb);
+}
+
+static gboolean
+module_load_wrapper(PurplePlugin *plugin)
+{
+	PyplugPluginData *data = pyplug_get_plugin_data(plugin);
+	if(data != NULL) {
+		return call_module_util_function(data, On_Load);
+	} else {
+		return FALSE;
+	}
+}
+
+static gboolean
+module_unload_wrapper(PurplePlugin *plugin)
+{
+	PyplugPluginData *data = pyplug_get_plugin_data(plugin);
+	if(data != NULL) {
+		return call_module_util_function(data, On_Unload);
+	} else {
+		return FALSE;
+	}
+}
+
+static void
+module_destroy_wrapper(PurplePlugin *plugin)
+{
+	PyplugPluginData *data = pyplug_get_plugin_data(plugin);
+	if(data != NULL) {
+		call_module_util_function(data, On_Destroy);
+	}
 }
 
 static gboolean
@@ -495,18 +663,21 @@ pyplug_probe_python_plugin(PurplePlugin *plugin)
 		PyMem_Free(ex_str);
 		probe_result = FALSE;
 	}
+
 	pyplugin_data = pyplug_init_plugin_data(plugin, module, module_name);
-	if(!pyplug_init_python_plugin_info(pyplugin_data)) {
-		plugin->error = "Module does not define required variables.";
-		probe_result = FALSE;
-	}
 	if(probe_result && !pyplug_find_loader_methods(module, pyplugin_data)) {
 		plugin->error = "Module does not define required methods.";
 		probe_result = FALSE;
 	}
 
-	if(!probe_result)
+	if(probe_result) {
+		probe_result = call_module_util_function(pyplugin_data, On_Init);
+	}
+
+	if(!probe_result) {
 		pyplug_remove_plugin_data(plugin);
+		plugin->unloadable = !probe_result;
+	}
 
 	purple_debug_info(PYPLUG_PLUGIN_ID, probe_result
 		? "Successfully loaded plugin module '%s'.\n"
@@ -520,13 +691,24 @@ pyplug_probe_python_plugin(PurplePlugin *plugin)
 	g_free(module_path);
 	g_free(file_name);
 
-	plugin->unloadable = !probe_result;
 	return purple_plugin_register(plugin);
 }
 
 static gboolean
 pyplug_load_python_plugin(PurplePlugin *plugin)
 {
+	PyplugPluginData *plugin_data = pyplug_get_plugin_data(plugin);
+	if(plugin_data == NULL)
+		return FALSE;
+
+	if(plugin_data->on_load == NULL) {
+		purple_debug_error(PYPLUG_PLUGIN_ID, "Module %s does not define "
+			"'on_init' function.\n", plugin_data->py_module_name);
+		return FALSE;
+	}
+
+
+
 	return TRUE;
 }
 
@@ -546,9 +728,9 @@ static PurplePluginLoaderInfo loader_info =
 	NULL,				//exts
 
 	pyplug_probe_python_plugin,
-	pyplug_load_python_plugin,
-	pyplug_unload_python_plugin,
-	pyplug_destroy_python_plugin,
+	module_load_wrapper,
+	module_unload_wrapper,
+	module_destroy_wrapper,
 
 	//padding
 	NULL,
