@@ -10744,10 +10744,25 @@ $as_echo "found in $PURPLE_INCLUDE" >&6; }
 	#
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for purple library" >&5
 $as_echo_n "checking for purple library... " >&6; }
+	UNAME=$((uname))
+	case ${UNAME:0:6} in
+		"CYGWIN" )
+			ac_libpurple_soname="libpurple.dll"
+			;;
+		* )
+			ac_libpurple_soname="libpurple.so"
+			;;
+	esac
+
+cat >>confdefs.h <<_ACEOF
+#define LIBPURPLE_SONAME "$ac_libpurple_soname"
+_ACEOF
+
+
 	PURPLE_LIB=""
 	for dir in $LIBPURPLE_lib_check
 	do
-		if test -d "$dir" && test -f "$dir/libpurple.so"
+		if test -d "$dir" && test -f "$dir/$ac_libpurple_soname"
 		then
 			PURPLE_LIB=$dir
 			break

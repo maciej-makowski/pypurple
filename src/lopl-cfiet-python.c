@@ -1,10 +1,7 @@
 /*
  * TODO: Make it work on Python 3.0 (UNICODE mothafucka, do you use it?!)
  * TODO: Refactor function names, private ones should not pollute file with pyplug_ prefix
- * TODO: Make module properly init/load/unload/destroy
- * TODO: Investigate why everything blows up if plugin module imports ctypes
  * TODO: Move defines somewhere else
- * TODO: Create apporpriate types for python strings, internal pidgin string and out strings, so we know who and how should deallocate them
  */
 #include <Python.h>
 
@@ -36,8 +33,10 @@
 #define PYPLUG_MODULE_HOMEPAGE		"HOMEPAGE"
 #define PYPLUG_MODULE_TYPE			"TYPE"
 #define PYPLUG_MODULE_PRIORITY		"PRIORITY"
+
 #define PYPLUG_PURPLE_VERSION		"PURPLE_VERSION"
 #define PYPLUG_PURPLE_MAGIC			"PURPLE_MAGIC"
+#define PYPLUG_LIBPURPLE_SONAME 	"LIBPURPLE_SONAME"
 
 #define PYPLUG_MODULE_ONINIT		"on_init"
 #define PYPLUG_MODULE_ONLOAD		"on_load"
@@ -251,6 +250,18 @@ create_module_plugin_info(const gchar * module_name)
 	plugin_info->homepage = g_strdup(PYPLUG_MODULE_DEFAULT_INFO_VALUE);
 
 	return plugin_info;
+}
+
+static PyObject *
+create_module_data_dict(PyplugPluginData *data)
+{
+	PyObject *dict = PyDict_New();
+	PyDict_SetItemString(dict, PYPLUG_PURPLE_MAGIC,
+			PyInt_FromLong(PURPLE_PLUGIN_MAGIC));
+	PyDict_SetItemString(dict, PYPLUG_PURPLE_VERSION,
+			Py_BuildValue("(ii)", PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION));
+	PyDict_SetItemString(dict, PYPLUG_LIBPURPLE_SONAME, PyString_FromString(LIBPURPLE_SONAME));
+	return dict;
 }
 
 static PyplugPluginData*
@@ -477,11 +488,6 @@ plugin_to_pydict(PurplePlugin *plugin, const char *module_name)
 	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_VERSION, version, "");
 	SET_STRING_IN_PLUGIN_DICT(PYPLUG_MODULE_HOMEPAGE, homepage, "");
 
-	PyDict_SetItemString(dict, PYPLUG_PURPLE_MAGIC,
-			PyInt_FromLong(PURPLE_PLUGIN_MAGIC));
-	PyDict_SetItemString(dict, PYPLUG_PURPLE_VERSION,
-			Py_BuildValue("(ii)", PURPLE_MAJOR_VERSION, PURPLE_MINOR_VERSION));
-
 	return dict;
 }
 
@@ -524,13 +530,16 @@ call_module_python_function(PyObject *function, PyplugPluginData *pyplugin,
 {
 	gboolean result = FALSE;
 	PyObject *error = NULL,
-			 *plugin_dict = NULL,
+			 *plugin_info_dict = NULL,
+			 *data_dict = NULL,
 			 *call_tuple = NULL,
 			 *init_ret = NULL;
 
-	plugin_dict = plugin_to_pydict(pyplugin->plugin, pyplugin->py_module_name);
-	call_tuple = PyTuple_New(1);
-	PyTuple_SetItem(call_tuple, 0, plugin_dict);
+	plugin_info_dict = plugin_to_pydict(pyplugin->plugin, pyplugin->py_module_name);
+	data_dict = create_module_data_dict(pyplugin);
+	call_tuple = PyTuple_New(2);
+	PyTuple_SetItem(call_tuple, 0, plugin_info_dict);
+	PyTuple_SetItem(call_tuple, 1, data_dict);
 	init_ret = PyObject_CallObject(function, call_tuple);
 
 	if(init_ret == NULL && (error = PyErr_Occurred()) != NULL) {
@@ -547,10 +556,11 @@ call_module_python_function(PyObject *function, PyplugPluginData *pyplugin,
 	}
 
 	if(after_func_cb != NULL) {
-		after_func_cb(pyplugin, result, plugin_dict);
+		after_func_cb(pyplugin, result, plugin_info_dict);
 	}
 
-	Py_XDECREF(plugin_dict);
+	Py_XDECREF(data_dict);
+	Py_XDECREF(plugin_info_dict);
 	Py_XDECREF(init_ret);
 	Py_XDECREF(call_tuple);
 	Py_XDECREF(error);

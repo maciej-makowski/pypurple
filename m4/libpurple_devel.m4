@@ -81,10 +81,21 @@ AC_DEFUN([LIBPURPLE_DEVEL],
 	# Find path to library
 	#
 	AC_MSG_CHECKING([for purple library])
+	UNAME=$((uname))
+	case ${UNAME:0:6} in
+		"CYGWIN" )
+			ac_libpurple_soname="libpurple.dll"
+			;;
+		* )
+			ac_libpurple_soname="libpurple.so"
+			;;
+	esac
+	AC_DEFINE_UNQUOTED([LIBPURPLE_SONAME], "$ac_libpurple_soname", [Linked libpurple shared object name])
+
 	PURPLE_LIB=""
 	for dir in $LIBPURPLE_lib_check
 	do
-		if test -d "$dir" && test -f "$dir/libpurple.so"
+		if test -d "$dir" && test -f "$dir/$ac_libpurple_soname"
 		then
 			PURPLE_LIB=$dir
 			break
