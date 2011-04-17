@@ -62,16 +62,16 @@
 #undef PACKAGE_VERSION
 
 /* Plugin author for libpurple */
-#undef PYPLUG_PLUGIN_AUTHOR
+#undef PYPRPL_PLUGIN_AUTHOR
 
 /* Plugin homepage for libpurple */
-#undef PYPLUG_PLUGIN_HOMEPAGE
+#undef PYPRPL_PLUGIN_HOMEPAGE
 
 /* Plugin id for libpurple */
-#undef PYPLUG_PLUGIN_ID
+#undef PYPRPL_PLUGIN_ID
 
 /* Plugin version for libpurple */
-#undef PYPLUG_PLUGIN_VERSION
+#undef PYPRPL_PLUGIN_VERSION
 
 /* Linked python version */
 #undef PYTHON_SONAME

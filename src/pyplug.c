@@ -4,9 +4,49 @@
 #include "pyplug.h"
 #include "config.h"
 
+#define PY_MDL_SYS	"sys"
+#define PY_SMBL_PATH	"path"
+
 static gboolean 	_pyplug_initialized = FALSE;
 static void		*_libpython_handle = NULL;
 static GSList		*_dbg_handlers = NULL;
+
+typedef struct _PyPlugDebugData {
+	PyPlugDebugLevel	level;
+	const char		*message;
+} PyPlugDebugData;
+
+static void
+debug_call_handler (gpointer data, gpointer user_data)
+{
+	PyPlugDebugFnc cb = (PyPlugDebugFnc)data;
+	PyPlugDebugData* dbgdata = (PyPlugDebugData*)user_data;
+
+	if(cb != NULL) {
+		(*cb)(dbgdata->level, dbgdata->message);
+	}
+}
+
+static void
+pyplug_debug (PyPlugDebugLevel level, const char* format, ...)
+{
+	if(_dbg_handlers != NULL) {
+		va_list 	args;
+		PyPlugDebugData data;
+		char		*message;
+
+		va_start(args, format);
+		message = g_strdup_vprintf(format, args);
+		va_end(args);
+
+		data.level = level;
+		data.message = message;
+
+		g_slist_foreach(_dbg_handlers, debug_call_handler, &data);
+		g_free(message);
+
+	}
+}
 
 static void
 pyplug_debug_misc(const char* format, ...)
@@ -101,57 +141,16 @@ pyplug_finalize(void)
 void
 pyplug_reg_dbgcb (PyPlugDebugFnc callback)
 {
-	pyplug_debug_misc("Registering function '%#x' as debug handler.\n",
-		(unsigned int)callback);
+	pyplug_debug_misc("Registering function as debug handler.\n");
 	_dbg_handlers = g_slist_prepend(_dbg_handlers, (gpointer)callback);
 }
 
 void
 pyplug_unreg_dbgcb (PyPlugDebugFnc callback)
 {
-	pyplug_debug_misc("Unregistering function '%#x' from debug "
-		"handlers.\n", (unsigned int)callback);
+	pyplug_debug_misc("Unregistering function from debug handlers.\n");
 	_dbg_handlers = g_slist_remove(_dbg_handlers, (gpointer)callback);
 }
-
-typedef struct _PyPlugDebugData {
-	PyPlugDebugLevel	level;
-	const char		*message;
-} PyPlugDebugData;
-
-static void
-pyplug_debug_call_handler (gpointer data, gpointer user_data)
-{
-	PyPlugDebugFnc cb = (PyPlugDebugFnc)data;
-	PyPlugDebugData* dbgdata = (PyPlugDebugData*)user_data;
-
-	if(cb != NULL) {
-		(*cb)(dbgdata->level, dbgdata->message);
-	}
-}
-
-void
-pyplug_debug (PyPlugDebugLevel level, const char* format, ...)
-{
-	if(_dbg_handlers != NULL) {
-		va_list 	args;
-		PyPlugDebugData data;
-		char		*message;
-
-		va_start(args, format);
-		message = g_strdup_vprintf(format, args);
-		va_end(args);
-
-		data.level = level;
-		data.message = message;
-
-		g_slist_foreach(_dbg_handlers, pyplug_debug_call_handler, &data);
-		g_free(message);
-
-	}
-}
-
-
 
 gboolean
 pyplug_libpython_load (void)
@@ -267,9 +266,7 @@ pyplug_init_interpreter (void)
 		py_plugin.interpreter = Py_NewInterpreter();
 
 		if(py_plugin.interpreter != NULL) {
-			pyplug_debug_misc("Interpreter successfully initialized"
-				"under 0x%X.\n",
-				(unsigned int)py_plugin.interpreter);
+			pyplug_debug_misc("Interpreter successfully initialized.\n");
 			pyplug_activate_interpreter();
 			return TRUE;
 		} else {
@@ -286,8 +283,7 @@ pyplug_free_interpreter (void)
 	pyplug_debug_info("Releasing interpreter for '%s'.\n", 
 			Py_GetVersion());
 	if(py_plugin.interpreter != NULL) {
-		pyplug_debug_misc("Releasing interpreter under 0x%X.\n",
-				(unsigned int)py_plugin.interpreter);
+		pyplug_debug_misc("Releasing interpreter.\n");
 
 		if(PyThreadState_Get() != py_plugin.interpreter)
 			// interpreter must hold GIL during unloading
@@ -299,11 +295,6 @@ pyplug_free_interpreter (void)
 	}
 	py_plugin.interpreter = NULL;
 }
-
-#define PY_MDL_SYS	"sys"
-
-#define PY_SMBL_PATH	"path"
-
 
 gchar**
 pyplug_syspath_get(void)
@@ -332,7 +323,6 @@ pyplug_syspath_get(void)
 	Py_DECREF(imp_sys);
 	return elements;
 }
-
 
 gboolean
 pyplug_syspath_set_stringv(const gchar **paths, gboolean replace)

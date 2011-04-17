@@ -38,12 +38,11 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/config.h.in $(top_srcdir)/aminclude_static.am
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/libpurple_devel.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_python30_devel.m4 \
+	$(top_srcdir)/m4/libpurple_devel.m4 \
 	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
 	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
-	$(top_srcdir)/m4/AX_PYTHON30_DEVEL.m4 \
-	$(top_srcdir)/configure.ac
+	$(top_srcdir)/m4/lt~obsolete.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/config/mkinstalldirs
@@ -73,15 +72,14 @@ am__base_list = \
   sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
 am__installdirs = "$(DESTDIR)$(libdir)"
 LTLIBRARIES = $(lib_LTLIBRARIES)
-liblopl_cfiet_python_la_LIBADD =
-am_liblopl_cfiet_python_la_OBJECTS =  \
-	liblopl_cfiet_python_la-lopl-cfiet-python.lo \
-	liblopl_cfiet_python_la-pyplug.lo
-liblopl_cfiet_python_la_OBJECTS =  \
-	$(am_liblopl_cfiet_python_la_OBJECTS)
-liblopl_cfiet_python_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
-	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(liblopl_cfiet_python_la_LDFLAGS) $(LDFLAGS) -o $@
+liblopl_cfiet_pypurple_la_LIBADD =
+am_liblopl_cfiet_pypurple_la_OBJECTS =  \
+	liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.lo \
+	liblopl_cfiet_pypurple_la-pyplug.lo \
+	liblopl_cfiet_pypurple_la-pyprpl-module.lo \
+	liblopl_cfiet_pypurple_la-pyprpl-util.lo
+liblopl_cfiet_pypurple_la_OBJECTS =  \
+	$(am_liblopl_cfiet_pypurple_la_OBJECTS)
 libpyplug_la_LIBADD =
 am_libpyplug_la_OBJECTS = pyplug.lo
 libpyplug_la_OBJECTS = $(am_libpyplug_la_OBJECTS)
@@ -98,8 +96,8 @@ CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) \
 	--mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
 	$(LDFLAGS) -o $@
-SOURCES = $(liblopl_cfiet_python_la_SOURCES) $(libpyplug_la_SOURCES)
-DIST_SOURCES = $(liblopl_cfiet_python_la_SOURCES) \
+SOURCES = $(liblopl_cfiet_pypurple_la_SOURCES) $(libpyplug_la_SOURCES)
+DIST_SOURCES = $(liblopl_cfiet_pypurple_la_SOURCES) \
 	$(libpyplug_la_SOURCES)
 ETAGS = etags
 CTAGS = ctags
@@ -234,7 +232,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-lib_LTLIBRARIES = libpyplug.la liblopl-cfiet-python.la
+lib_LTLIBRARIES = libpyplug.la liblopl-cfiet-pypurple.la
 INCLUDES = $(DEPS_CFLAGS) \
 			$(PYTHON_CPPFLAGS)
 
@@ -246,15 +244,15 @@ AM_LDFLAGS = --as-needed \
 libpyplug_la_SOURCES = pyplug.c
 
 # pidgin plugin options
-liblopl_cfiet_python_la_CPPFLAGS = $(INCLUDES) \
-									$(PURPLE_CFLAGS)
+liblopl_cfiet_pypurple_la_CPPFLAGS = $(INCLUDES) \
+										$(PURPLE_CFLAGS)
 
-liblopl_cfiet_python_la_LDFLAGS = $(AM_LDFLAGS) \
-									$(LIBS) \
-									$(PURPLE_LIBS)
+liblopl_cfiet_pyurple_la_LDFLAGS = $(AM_LDFLAGS) \
+										$(LIBS) \
+										$(PURPLE_LIBS)
 
-liblopl_cfiet_python_la_DEPENDENCIES = libpyplug.la
-liblopl_cfiet_python_la_SOURCES = lopl-cfiet-python.c pyplug.c
+liblopl_cfiet_pypurple_la_DEPENDENCIES = libpyplug.la
+liblopl_cfiet_pypurple_la_SOURCES = lopl-cfiet-pypurple.c pyplug.c pyprpl-module.c pyprpl-util.c
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -338,8 +336,8 @@ clean-libLTLIBRARIES:
 	  echo "rm -f \"$${dir}/so_locations\""; \
 	  rm -f "$${dir}/so_locations"; \
 	done
-liblopl-cfiet-python.la: $(liblopl_cfiet_python_la_OBJECTS) $(liblopl_cfiet_python_la_DEPENDENCIES) 
-	$(liblopl_cfiet_python_la_LINK) -rpath $(libdir) $(liblopl_cfiet_python_la_OBJECTS) $(liblopl_cfiet_python_la_LIBADD) $(LIBS)
+liblopl-cfiet-pypurple.la: $(liblopl_cfiet_pypurple_la_OBJECTS) $(liblopl_cfiet_pypurple_la_DEPENDENCIES) 
+	$(LINK) -rpath $(libdir) $(liblopl_cfiet_pypurple_la_OBJECTS) $(liblopl_cfiet_pypurple_la_LIBADD) $(LIBS)
 libpyplug.la: $(libpyplug_la_OBJECTS) $(libpyplug_la_DEPENDENCIES) 
 	$(LINK) -rpath $(libdir) $(libpyplug_la_OBJECTS) $(libpyplug_la_LIBADD) $(LIBS)
 
@@ -349,8 +347,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblopl_cfiet_python_la-lopl-cfiet-python.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblopl_cfiet_python_la-pyplug.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblopl_cfiet_pypurple_la-pyplug.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-module.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-util.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pyplug.Plo@am__quote@
 
 .c.o:
@@ -374,19 +374,33 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
 
-liblopl_cfiet_python_la-lopl-cfiet-python.lo: lopl-cfiet-python.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_python_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT liblopl_cfiet_python_la-lopl-cfiet-python.lo -MD -MP -MF $(DEPDIR)/liblopl_cfiet_python_la-lopl-cfiet-python.Tpo -c -o liblopl_cfiet_python_la-lopl-cfiet-python.lo `test -f 'lopl-cfiet-python.c' || echo '$(srcdir)/'`lopl-cfiet-python.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblopl_cfiet_python_la-lopl-cfiet-python.Tpo $(DEPDIR)/liblopl_cfiet_python_la-lopl-cfiet-python.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lopl-cfiet-python.c' object='liblopl_cfiet_python_la-lopl-cfiet-python.lo' libtool=yes @AMDEPBACKSLASH@
+liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.lo: lopl-cfiet-pypurple.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.lo -MD -MP -MF $(DEPDIR)/liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.Tpo -c -o liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.lo `test -f 'lopl-cfiet-pypurple.c' || echo '$(srcdir)/'`lopl-cfiet-pypurple.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.Tpo $(DEPDIR)/liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='lopl-cfiet-pypurple.c' object='liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_python_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o liblopl_cfiet_python_la-lopl-cfiet-python.lo `test -f 'lopl-cfiet-python.c' || echo '$(srcdir)/'`lopl-cfiet-python.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o liblopl_cfiet_pypurple_la-lopl-cfiet-pypurple.lo `test -f 'lopl-cfiet-pypurple.c' || echo '$(srcdir)/'`lopl-cfiet-pypurple.c
 
-liblopl_cfiet_python_la-pyplug.lo: pyplug.c
-@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_python_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT liblopl_cfiet_python_la-pyplug.lo -MD -MP -MF $(DEPDIR)/liblopl_cfiet_python_la-pyplug.Tpo -c -o liblopl_cfiet_python_la-pyplug.lo `test -f 'pyplug.c' || echo '$(srcdir)/'`pyplug.c
-@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblopl_cfiet_python_la-pyplug.Tpo $(DEPDIR)/liblopl_cfiet_python_la-pyplug.Plo
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='pyplug.c' object='liblopl_cfiet_python_la-pyplug.lo' libtool=yes @AMDEPBACKSLASH@
+liblopl_cfiet_pypurple_la-pyplug.lo: pyplug.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT liblopl_cfiet_pypurple_la-pyplug.lo -MD -MP -MF $(DEPDIR)/liblopl_cfiet_pypurple_la-pyplug.Tpo -c -o liblopl_cfiet_pypurple_la-pyplug.lo `test -f 'pyplug.c' || echo '$(srcdir)/'`pyplug.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblopl_cfiet_pypurple_la-pyplug.Tpo $(DEPDIR)/liblopl_cfiet_pypurple_la-pyplug.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='pyplug.c' object='liblopl_cfiet_pypurple_la-pyplug.lo' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_python_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o liblopl_cfiet_python_la-pyplug.lo `test -f 'pyplug.c' || echo '$(srcdir)/'`pyplug.c
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o liblopl_cfiet_pypurple_la-pyplug.lo `test -f 'pyplug.c' || echo '$(srcdir)/'`pyplug.c
+
+liblopl_cfiet_pypurple_la-pyprpl-module.lo: pyprpl-module.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT liblopl_cfiet_pypurple_la-pyprpl-module.lo -MD -MP -MF $(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-module.Tpo -c -o liblopl_cfiet_pypurple_la-pyprpl-module.lo `test -f 'pyprpl-module.c' || echo '$(srcdir)/'`pyprpl-module.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-module.Tpo $(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-module.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='pyprpl-module.c' object='liblopl_cfiet_pypurple_la-pyprpl-module.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o liblopl_cfiet_pypurple_la-pyprpl-module.lo `test -f 'pyprpl-module.c' || echo '$(srcdir)/'`pyprpl-module.c
+
+liblopl_cfiet_pypurple_la-pyprpl-util.lo: pyprpl-util.c
+@am__fastdepCC_TRUE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT liblopl_cfiet_pypurple_la-pyprpl-util.lo -MD -MP -MF $(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-util.Tpo -c -o liblopl_cfiet_pypurple_la-pyprpl-util.lo `test -f 'pyprpl-util.c' || echo '$(srcdir)/'`pyprpl-util.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-util.Tpo $(DEPDIR)/liblopl_cfiet_pypurple_la-pyprpl-util.Plo
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='pyprpl-util.c' object='liblopl_cfiet_pypurple_la-pyprpl-util.lo' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(LIBTOOL)  --tag=CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=compile $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(liblopl_cfiet_pypurple_la_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o liblopl_cfiet_pypurple_la-pyprpl-util.lo `test -f 'pyprpl-util.c' || echo '$(srcdir)/'`pyprpl-util.c
 
 mostlyclean-libtool:
 	-rm -f *.lo
