@@ -1,0 +1,103 @@
+#
+# Summary
+#
+Pypurple 	- python plugin that allows to load python modules as a libpurple
+			  application plugin.
+
+#
+# Prerequisites
+#
+To build this you will need:
+
+1. Development version of libpurple / pidgin, avalible from http://pidgin.im
+   or throug your favorite package manager, with all their required
+   dependecies,
+2. Development version of python >= 2.5 and < 3.0, avalible from 
+   http://www.python.org, or throug your favorite package manager
+
+
+#
+# Installation
+#
+As for now, this is still in full development. No releases are avalible and it
+does not yet install correctly into the system. To build your own version,
+just use standard:
+
+	./configure --prefix=<where_to_install> && make && make install
+
+Than just copy or link <where_to_install>/lib/lopl-cfiet-pyplug.lo to your
+~/.purple/plugin and it should work.
+
+#
+# Writing python modules
+#
+The python modules loaded by pypurple must define the following methods:
+
+	on_init(plugin_info_dict, env_dict) - this is called just after the module
+			has been loaded to python interpreter, but before plugin has
+			been registered in libpurple. Any changes to plugin_info_dict made
+			in this method will be taken into account in libpurple.
+
+	on_load(plugin_info_dict, env_dict) - this is called when libpurple enables
+			the plugin.
+
+Also the following methonds may be defined and used:
+
+	on_unload(plugin_info_dict, env_dict) - this is called when libpurple 
+			disables the plugin.
+
+	on_destroy(plugin_info_dict, env_dict) - this is called when libpurple
+			destoys the plugin.
+
+As for now, pypurple uses system-wide installed python enviroment, so all the
+the modules installed on your system are avalible for the plugins. Notice
+that since libpurple is event-based, some modules, like synchronic IO, should
+not be used in the plugins. Also, since there is currently no python wrapper
+for libpurple, the only way to use some of it's features is via ctypes 
+python module.
+
+#
+# Example python module
+#
+import ctypes
+
+class PypurpleError(Exception):
+    def __init__(self, msg):
+        self._msg = msg
+
+    def __str__(self):
+        return self.msg
+
+
+def on_init(plugin, purple_data):
+    plugin["ID"] = "core-test-pyplug"
+    plugin["NAME"] = "Python Dummy Plugin"
+    plugin["SUMMARY"] = "Test python plugin"
+    plugin["DESCRIPTION"] = "Tests if python plugins loads / unloads correctly"
+    plugin["AUTHOR"] = "Maciej Makowski"
+    plugin["HOMEPAGE"] = "http://www.cfiet.net"
+    return True
+
+
+def on_load(plugin, purple_data):
+    system = platform.system()
+    libpurple = ctypes.cdll.LoadLibrary(purple_data["LIBPURPLE_SONAME"])
+
+    if not libpurple:
+        raise PypurpleError("Could not load dll {0}.".
+                format(pypurple_data["LIBPURPLE_SONAME"));
+
+    libpurple.purple_debug_info(
+            ctypes.c_char_p("pypurple.py"),
+            ctypes.c_char_p("Plugin loaded successfully.\n")
+        )
+
+    return True
+
+
+def on_unload(plugin, purple_data):
+    return True
+
+
+def on_destroy(plugin, purple_data):
+    return True
